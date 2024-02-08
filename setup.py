@@ -10,7 +10,7 @@ setup(name='tap-googleplay',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap-googleplay'],
       install_requires=[
-          'singer-python==5.2.3',
+          'singer-python @ git+https://github.com/peliqan-io/singer-python@master',
           'google-api-python-client==1.7.9',
           'google-cloud-storage==1.16.1',
           'pytz'
