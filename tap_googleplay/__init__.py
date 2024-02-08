@@ -10,6 +10,7 @@ import json
 import singer
 from singer import utils, Transformer
 from singer import metadata
+from dateutil.relativedelta import relativedelta
 
 from google.cloud import storage
 
@@ -141,11 +142,15 @@ def query_report(bucket):
     catalog_entry = Context.get_catalog_entry(stream_name)
     stream_schema = catalog_entry['schema']
     package_name = Context.config['package_name']
+    prev_iterator_str = None
 
     bookmark = datetime.strptime(get_bookmark(stream_name), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.UTC)
-    delta = timedelta(days=1)
 
     extraction_time = singer.utils.now()
+    if bookmark.month == extraction_time.month and bookmark.year == extraction_time.year :
+        delta=timedelta(days=1)
+    else:
+        delta=relativedelta(months=1)
 
     iterator = bookmark
     singer.write_bookmark(
@@ -154,50 +159,64 @@ def query_report(bucket):
         'start_date',
         iterator.strftime(BOOKMARK_DATE_FORMAT)
     )
-
+    
     with Transformer(singer.UNIX_SECONDS_INTEGER_DATETIME_PARSING) as transformer:
         while iterator + delta <= extraction_time:
 
             iterator_str = iterator.strftime("%Y%m")  # like 201906
-            report_key = f"stats/installs/installs_{package_name}_{iterator_str}_{dimension_name}.csv"
+            if prev_iterator_str != iterator_str:
+                report_key = f"stats/installs/installs_{package_name}_{iterator_str}_{dimension_name}.csv"
+                report_object = bucket.get_blob(report_key)
+                try:
+                    rep_data = report_object.download_as_string()
+                    LOGGER.info(f"Report data fetched for {iterator_str}")
+                    bom = codecs.BOM_UTF16_LE
+                    if rep_data.startswith(bom):
+                        rep_data = rep_data[len(bom):]
 
-            rep_data = bucket.get_blob(report_key).download_as_string()
-            bom = codecs.BOM_UTF16_LE
-            if rep_data.startswith(bom):
-                rep_data = rep_data[len(bom):]
+                    rep_csv = rep_data.decode('utf-16le')
 
-            rep_csv = rep_data.decode('utf-16le')
+                    rep, fields = csv_to_list(rep_csv)
 
-            rep, fields = csv_to_list(rep_csv)
+                    for index, line in enumerate(rep, start=1):
+                        data = line
+                        data['dimension_name'] = dimension_name
+                        dim_value = data[fields[2]]
+                        if not dim_value:
+                            dim_value = 'null'
+                        data['dimension_value'] = dim_value
+                        del data[fields[2]]
 
-            for index, line in enumerate(rep, start=1):
-                data = line
-                data['dimension_name'] = dimension_name
-                dim_value = data[fields[2]]
-                if not dim_value:
-                    dim_value = 'null'
-                data['dimension_value'] = dim_value
-                del data[fields[2]]
+                        rec = transformer.transform(data, stream_schema)
 
-                rec = transformer.transform(data, stream_schema)
+                        singer.write_record(
+                            stream_name,
+                            rec,
+                            time_extracted=extraction_time
+                        )
 
-                singer.write_record(
-                    stream_name,
-                    rec,
-                    time_extracted=extraction_time
-                )
+                    Context.new_counts[stream_name] += 1
 
-                Context.new_counts[stream_name] += 1
+                    singer.write_bookmark(
+                        Context.state,
+                        stream_name,
+                        'start_date',
+                        (iterator + delta).strftime(BOOKMARK_DATE_FORMAT)
+                    )
+                    singer.write_state(Context.state)
+                except AttributeError:
+                    LOGGER.info(f"No report data available for {iterator_str}")
 
             singer.write_bookmark(
-                Context.state,
-                stream_name,
-                'start_date',
-                (iterator + delta).strftime(BOOKMARK_DATE_FORMAT)
+                    Context.state,
+                    stream_name,
+                    'start_date',
+                    (iterator + delta).strftime(BOOKMARK_DATE_FORMAT)
             )
-
-            singer.write_state(Context.state)
             iterator += delta
+            if iterator.month == extraction_time.month and iterator.year == extraction_time.year:
+                delta = timedelta(days=1)
+            prev_iterator_str = iterator_str
 
     singer.write_state(Context.state)
 
