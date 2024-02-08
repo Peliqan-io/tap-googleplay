@@ -14,6 +14,7 @@ from dateutil.relativedelta import relativedelta
 
 from google.cloud import storage
 
+
 REQUIRED_CONFIG_KEYS = [
     'key_file',
     'start_date',
@@ -26,8 +27,14 @@ LOGGER = singer.get_logger()
 
 BOOKMARK_DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
+class KeyFile(storage.Client):
 
-class Context:
+    @classmethod
+    def from_service_account_json(cls, json_credentials_path, *args, **kwargs):
+        return cls.from_service_account_info(json_credentials_path, *args, **kwargs)
+
+
+class Context():
     config = {}
     state = {}
     catalog = {}
@@ -35,6 +42,7 @@ class Context:
     stream_map = {}
     new_counts = {}
     updated_counts = {}
+
 
     @classmethod
     def get_catalog_entry(cls, stream_name):
@@ -100,7 +108,8 @@ def discover():
                 'package_name',
                 'dimension_name',
                 'dimension_value'
-            ]
+            ],
+            'metadata' : metadata.to_list(metadata.new())
         }
         streams.append(catalog_entry)
 
@@ -248,7 +257,7 @@ def main():
         Context.config = args.config
         Context.state = args.state
 
-        client = storage.Client.from_service_account_json(Context.config['key_file'])
+        client = KeyFile.from_service_account_json(Context.config['key_file'])
         bucket = client.get_bucket(Context.config['bucket_name'])
 
         sync(bucket)
