@@ -156,11 +156,11 @@ def query_report(bucket):
     bookmark = datetime.strptime(get_bookmark(stream_name), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.UTC)
 
     extraction_time = singer.utils.now()
-    if bookmark.month == extraction_time.month and bookmark.year == extraction_time.year :
-        delta=timedelta(days=1)
-    else:
+    if (extraction_time - bookmark).days > 31:
         delta=relativedelta(months=1)
-
+    else:
+        delta=timedelta(days=1)
+    
     iterator = bookmark
     singer.write_bookmark(
         Context.state,
@@ -223,7 +223,7 @@ def query_report(bucket):
                     (iterator + delta).strftime(BOOKMARK_DATE_FORMAT)
             )
             iterator += delta
-            if iterator.month == extraction_time.month and iterator.year == extraction_time.year:
+            if (extraction_time - iterator).days < 31:
                 delta = timedelta(days=1)
             prev_iterator_str = iterator_str
 
