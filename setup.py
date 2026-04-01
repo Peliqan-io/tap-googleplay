@@ -13,8 +13,14 @@ setup(name='tap-googleplay',
           'singer-python @ git+https://github.com/peliqan-io/singer-python@master',
           'google-api-python-client==1.7.9',
           'google-cloud-storage==1.16.1',
+          'urllib3>=1.26,<2',  # Required: google-cloud-storage 1.16.1 incompatible with urllib3 2.x
           'pytz'
       ],
+      extras_require={
+          'dev': [
+              'pytest>=7.0.0',
+          ]
+      },
       entry_points='''
           [console_scripts]
           tap-googleplay=tap_googleplay:main
