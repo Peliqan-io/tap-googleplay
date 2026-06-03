@@ -1,0 +1,95 @@
+{
+  "installs": {
+    "properties": {
+      "active_device_installs": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "daily_device_installs": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "daily_device_uninstalls": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "daily_device_upgrades": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "daily_user_installs": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "daily_user_uninstalls": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "date": {
+        "format": "date-time",
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "dimension_name": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "dimension_value": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "install_events": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "package_name": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "total_user_installs": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "uninstall_events": {
+        "type": [
+          "null",
+          "number"
+        ]
+      },
+      "update_events": {
+        "type": [
+          "null",
+          "number"
+        ]
+      }
+    },
+    "type": [
+      "null",
+      "object"
+    ]
+  }
+}
